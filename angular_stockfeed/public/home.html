@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html ng-app="spongeBobApp" ng-controller="mainCtrl">
+<head>
+    <title>AngularJS Stock Feeder</title>
+
+    <style>
+        .blue{
+            color: lightblue;
+        }
+    </style>
+<script src="dist/js/jquery.js"></script>
+<link rel="stylesheet" type="text/css" href="dist/css/bootstrap.css"></link>
+<script src="dist/js/angular.js"></script>
+</head>
+<body style="padding: 30px;">
+    
+    <input type="text" ng-model="myapp.symbol" />
+    <button class="btn btn-info" 
+            ng-click="FetchFeed()">Fetch</button>
+    
+    <br/><br/>
+    
+    <div class="container">
+    <div id="stockData" ng-repeat="feed in appData" 
+         class="jumbotron col-md-4 col-offset-md-4">
+        <h2>
+            <span ng-class="batClass">{{ feed.name }}</span>
+            | {{ feed.tradedOn }}</h2>
+        <table>
+            <tr>
+                <td>Last Trade: {{ feed.lastTrade }}</td>
+            </tr>
+            <tr>
+                <td>Current Rate: {{ feed.currentRate }}</td>
+            </tr>
+            <tr>
+                <td>Open: {{ feed.open }}</td>
+            </tr>
+            <tr>
+                <td>Close: {{ feed.close }}</td>
+            </tr>
+            <tr>
+                <td>PChange: {{ feed.pchange }}%</td>
+            </tr>
+            <tr>
+                <td>Change: {{ feed.change }}</td>
+            </tr>
+            <tr>
+                <td><br/><button class="btn btn-warning" 
+                    ng-click="RemoveFeed(feed)">Remove</button></td>
+            </tr>
+        </table>
+    </div>
+    </div>
+    
+</body>
+<script src="/dist/js/bootstrap.js"></script>
+<script>
+    
+    var app = angular.module("spongeBobApp", []);
+    
+    app.controller("mainCtrl", ['$scope', '$http', 
+                    '$interval', function($scope, $http, $interval){
+        $scope.myapp = {
+            symbol: "MIC"
+        };
+        
+        $scope.appData = []; 
+                        
+        $scope.batClass = "blue";
+                        
+        var urlSymbol = "http://www.google.com/finance/info?q=";
+        
+        function RefreshData(i){
+            $http.get(urlSymbol + $scope.appData[i].name)
+                .then(function(response){
+            var slicedResponse = 
+            response.data.slice(4, response.data.length);
+
+            slicedResponse = JSON.parse(slicedResponse)[0];
+
+            var newModel = {
+                name: slicedResponse.t,
+                open: slicedResponse.pcls_fix ,
+                close: slicedResponse.l,
+                pchange: slicedResponse.cp,
+                change: slicedResponse.c,
+                tradedOn: slicedResponse.e,
+                lastTrade: slicedResponse.lt,
+                currentRate: slicedResponse.l_cur
+            };
+
+            console.log(i);
+            console.log(newModel);
+            $scope.appData[i] = newModel;
+
+            });
+        }                
+        
+        $interval(function(){
+            
+            if($scope.appData.length > 0){
+                for(var i in $scope.appData){
+                    RefreshData(i);
+                }
+            }
+            
+        }, 5000);
+        
+        
+        
+        //set up fetch method
+        $scope.FetchFeed = function(){
+            //fetch the json obj via $http.get
+            $http.get(urlSymbol +
+                      $scope.myapp.symbol.trim()).then(function(response){
+                //log the response
+                var slicedResponse = 
+                    response.data.slice(4, response.data.length);
+                
+                slicedResponse = JSON.parse(slicedResponse)[0];
+                
+                //send data to an array
+                $scope.appData.push({ 
+                    name: slicedResponse.t,
+                    open: slicedResponse.pcls_fix ,
+                    close: slicedResponse.l,
+                    pchange: slicedResponse.cp,
+                    change: slicedResponse.c,
+                    tradedOn: slicedResponse.e,
+                    lastTrade: slicedResponse.lt,
+                    currentRate: slicedResponse.l_cur
+                });
+            });
+        };
+        
+        $scope.RemoveFeed = function(feed){
+            
+            $scope.appData = $scope.appData.filter(function(val){
+                return val.name != feed.name;
+            });
+            
+        };
+        
+    }]);
+    
+</script>
+</html>
